@@ -1,0 +1,265 @@
+import React, { useState, useEffect } from 'react';
+import { Search, CheckSquare, Square, Copy, Terminal, Shield, Clock, Users, Database, FileText, Cpu, ChevronDown, ChevronUp } from 'lucide-react';
+
+// Organização dos dados brutos em categorias estruturadas
+const checklistData = [
+  {
+    id: 'tools',
+    title: 'Tools & Utilities',
+    icon: <Terminal className="w-5 h-5" />,
+    color: 'bg-blue-600',
+    items: [
+      'Process Hacker',
+      'Autoruns',
+      'FullEventLogView',
+      'LastActivityView',
+      'BrowsingHistoryView'
+    ]
+  },
+  {
+    id: 'memory',
+    title: 'Memory Analysis',
+    icon: <Cpu className="w-5 h-5" />,
+    color: 'bg-purple-600',
+    description: 'Procedures that must be conducted for Memory Analysis',
+    items: [
+      'Analyze Process Tree',
+      'Check Web Connections',
+      'Verify Signature Status'
+    ]
+  },
+  {
+    id: 'users',
+    title: 'User Accounts',
+    icon: <Users className="w-5 h-5" />,
+    color: 'bg-green-600',
+    items: [
+      'Check "Net user" command output',
+      'Check Lusrmgr.msc',
+      'Event ID 4720: User account created',
+      'Event ID 4732: Member added to security-enabled local group'
+    ]
+  },
+  {
+    id: 'scheduled',
+    title: 'Scheduled Tasks',
+    icon: <Clock className="w-5 h-5" />,
+    color: 'bg-yellow-600',
+    items: [
+      'Check Autoruns (Scheduled Tasks tab)',
+      'Event ID 4698: A scheduled task was created',
+      'Event ID 4702: A scheduled task was updated',
+      'Log: Applications and Services Logs > Microsoft > Windows > TaskScheduler > Operational.evtx'
+    ]
+  },
+  {
+    id: 'registry',
+    title: 'Registry Persistence',
+    icon: <Database className="w-5 h-5" />,
+    color: 'bg-red-600',
+    description: 'Check Run Keys, Startup Folder & Modifications',
+    items: [
+      'Event ID 4657: A registry value was modified',
+      'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+      'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce',
+      'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+      'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce',
+      'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserShellFolders',
+      'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellFolders',
+      'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellFolders',
+      'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserShellFolders',
+      'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServicesOnce',
+      'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServices',
+      'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServices',
+      'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run',
+      'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run'
+    ],
+    isCode: true // Flag para indicar que estes itens devem ser copiáveis
+  },
+  {
+    id: 'files',
+    title: 'Files & Services',
+    icon: <FileText className="w-5 h-5" />,
+    color: 'bg-indigo-600',
+    items: [
+      'Check Services running',
+      'Perform AV Scan',
+      'Manual Search for suspicious files'
+    ]
+  }
+];
+
+export default function App() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [checkedItems, setCheckedItems] = useState({});
+  const [expandedSections, setExpandedSections] = useState({});
+
+  // Inicializa todas as seções como expandidas
+  useEffect(() => {
+    const initialExpanded = {};
+    checklistData.forEach(section => {
+      initialExpanded[section.id] = true;
+    });
+    setExpandedSections(initialExpanded);
+  }, []);
+
+  const toggleCheck = (id) => {
+    setCheckedItems(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const toggleSection = (id) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    // Em um app real, aqui mostraria um toast de confirmação
+  };
+
+  // Filtra as categorias baseadas na busca
+  const filteredData = checklistData.map(section => {
+    const matchesSectionTitle = section.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const filteredItems = section.items.filter(item => 
+      item.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    // Se a busca der match no título, mostra tudo, senão mostra só os itens que deram match
+    if (matchesSectionTitle) return section;
+    if (filteredItems.length > 0) return { ...section, items: filteredItems };
+    return null;
+  }).filter(Boolean);
+
+  const calculateProgress = () => {
+    const totalItems = checklistData.reduce((acc, curr) => acc + curr.items.length, 0);
+    const checkedCount = Object.values(checkedItems).filter(Boolean).length;
+    return Math.round((checkedCount / totalItems) * 100);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans p-6">
+      <div className="max-w-4xl mx-auto">
+        
+        {/* Header */}
+        <header className="mb-8 text-center sm:text-left">
+          <h1 className="text-3xl font-bold flex items-center justify-center sm:justify-start gap-3 mb-2 text-cyan-400">
+            <Shield className="w-8 h-8" />
+            Windows Incident Response Checklist
+          </h1>
+          <p className="text-slate-400">
+            Ferramenta interativa baseada no currículo do LetsDefend.
+            Use isso para guiar sua investigação.
+          </p>
+        </header>
+
+        {/* Controls */}
+        <div className="sticky top-4 z-10 bg-slate-900/95 backdrop-blur shadow-lg rounded-xl p-4 border border-slate-700 mb-8 flex flex-col sm:flex-row gap-4 justify-between items-center">
+          
+          {/* Search Bar */}
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-2.5 w-5 h-5 text-slate-500" />
+            <input 
+              type="text" 
+              placeholder="Buscar Event ID, chave de registro ou ferramenta..." 
+              className="w-full bg-slate-800 border border-slate-600 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-200"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Progress Bar */}
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <span className="text-sm font-medium text-slate-400">Progresso:</span>
+            <div className="w-full sm:w-32 h-3 bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
+                style={{ width: `${calculateProgress()}%` }}
+              />
+            </div>
+            <span className="text-sm font-bold text-cyan-400">{calculateProgress()}%</span>
+          </div>
+        </div>
+
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+          {filteredData.length > 0 ? filteredData.map((section) => (
+            <div key={section.id} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              
+              {/* Section Header */}
+              <div 
+                className={`p-4 flex items-center justify-between cursor-pointer ${section.color} bg-opacity-10 border-b border-slate-700`}
+                onClick={() => toggleSection(section.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${section.color} text-white`}>
+                    {section.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{section.title}</h3>
+                    {section.description && (
+                      <p className="text-xs text-slate-400 hidden sm:block">{section.description}</p>
+                    )}
+                  </div>
+                </div>
+                {expandedSections[section.id] ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+              </div>
+
+              {/* Section Items */}
+              {expandedSections[section.id] && (
+                <div className="p-2">
+                  {section.items.map((item, idx) => {
+                    const uniqueId = `${section.id}-${idx}`;
+                    const isChecked = checkedItems[uniqueId];
+                    
+                    return (
+                      <div 
+                        key={uniqueId} 
+                        className={`group flex items-start gap-3 p-3 rounded-lg transition-colors ${isChecked ? 'bg-slate-700/30 opacity-70' : 'hover:bg-slate-700/50'}`}
+                      >
+                        <button 
+                          onClick={() => toggleCheck(uniqueId)}
+                          className="mt-1 flex-shrink-0 focus:outline-none"
+                        >
+                          {isChecked ? 
+                            <CheckSquare className="w-5 h-5 text-cyan-400" /> : 
+                            <Square className="w-5 h-5 text-slate-500 group-hover:text-slate-400" />
+                          }
+                        </button>
+                        
+                        <div className="flex-grow overflow-hidden">
+                          <p className={`text-sm break-all ${section.isCode ? 'font-mono text-xs text-yellow-300' : 'text-slate-300'}`}>
+                            {item}
+                          </p>
+                        </div>
+
+                        {section.isCode && (
+                          <button 
+                            onClick={() => copyToClipboard(item)}
+                            className="p-1.5 rounded bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-600 transition-all opacity-0 group-hover:opacity-100"
+                            title="Copiar para clipboard"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )) : (
+            <div className="col-span-full text-center py-10 text-slate-500">
+              <p>Nenhum item encontrado para sua busca.</p>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
